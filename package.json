@@ -1,0 +1,23 @@
+{
+  "name": "zengardenreceiver",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "p5js",
+    "nodejs",
+    "mqtt"
+  ],
+  "author": "mlai4943, qxie3495, yuwu0411, zcui2280",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.3",
+    "mqtt": "^4.3.6",
+    "osc": "^2.4.2",
+    "got": "^12.6.0",
+    "socket.io": "^4.4.1"
+  }
+}
