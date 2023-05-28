@@ -2,10 +2,10 @@
 class FlockParams {
     constructor() {
         this.maxForce = 0.08
-        this.maxSpeed = 2.5
+        this.maxSpeed = 3
         this.perceptionRadius = 100
-        this.alignAmp = 1
-        this.cohesionAmp = 1
+        this.alignAmp = 0.9
+        this.cohesionAmp = 0.5
         this.separationAmp = 1
     }
 }
@@ -19,62 +19,61 @@ let flockParams = new FlockParams()
 // gui.add(flockParams, 'maxForce', .05, 3)
 // gui.add(flockParams, 'perceptionRadius', 20, 300)
 
+const shadowColor = 'rgba(0,0,0,0.05)'
+
 /*==================
 lotusLeaf
 ===================*/
+// class lotusLeaf {
+//     constructor(x, y, offset, scale) {
+//         this.x = x
+//         this.y = y
+//         this.offset = offset
+//         this.scale = scale
+//         this.color = color(71, 184, 151)
+//     }
 
-const shadowColor = 'rgba(0,0,0,0.05)'
+//     drawShape(vertices, offset, color) {
+//         fill(color)
+//         beginShape()
+//             vertices.map(v => vertex(v.x + offset, v.y + offset))
+//         endShape()
+//     }
 
-class lotusLeaf {
-    constructor(x, y, offset, scale) {
-        this.x = x
-        this.y = y
-        this.offset = offset
-        this.scale = scale
-        this.color = color(71, 184, 151)
-    }
+//     show() {
+//         push()
+//             translate(this.x, this.y)
+//             noiseDetail(1, .8)
+//             let vertices = []
 
-    drawShape(vertices, offset, color) {
-        fill(color)
-        beginShape()
-            vertices.map(v => vertex(v.x + offset, v.y + offset))
-        endShape()
-    }
-
-    show() {
-        push()
-            translate(this.x, this.y)
-            noiseDetail(1, .8)
-            let vertices = []
-
-            for (let i = 0; i < TWO_PI; i += radians(1)) {
+//             for (let i = 0; i < TWO_PI; i += radians(1)) {
                 
-                let x = this.offset * cos(i) + this.offset
-                let y = this.offset * sin(i) + this.offset
+//                 let x = this.offset * cos(i) + this.offset
+//                 let y = this.offset * sin(i) + this.offset
                 
-                let r = 180 + map(noise(x, y), 0, 1, -this.scale, this.scale)
+//                 let r = 180 + map(noise(x, y), 0, 1, -this.scale, this.scale)
                 
-                let x1 = r * cos(i)
-                let y1 = r * sin(i)
+//                 let x1 = r * cos(i)
+//                 let y1 = r * sin(i)
                 
-                vertices.push({x: x1, y: y1})
-            }
+//                 vertices.push({x: x1, y: y1})
+//             }
 
-            noStroke()
-            this.drawShape(vertices, 50, shadowColor)
-            this.drawShape(vertices, 0, this.color)
+//             noStroke()
+//             this.drawShape(vertices, 50, shadowColor)
+//             this.drawShape(vertices, 0, this.color)
 
-            vertices.map((v, index) => {
-                if ((index + 1) % 40 === 0) {
-                    strokeWeight(6)
-                    stroke(23,111,88,40)
-                    line(v.x * .1, v.y * .19, v.x * .9, v.y * .86)
-                }
-            })
-        pop()
-    }
+//             vertices.map((v, index) => {
+//                 if ((index + 1) % 40 === 0) {
+//                     strokeWeight(6)
+//                     stroke(23,111,88,40)
+//                     line(v.x * .1, v.y * .19, v.x * .9, v.y * .86)
+//                 }
+//             })
+//         pop()
+//     }
 
-}
+// }
 
 /*==================
 Ripple
@@ -177,6 +176,7 @@ class Koi {
 
     separation = kois => this.calculateDesiredSteeringForce(kois, 'separation')
 
+    // avoid
     avoid(obstacle) {
         let steering = createVector()
         let d = dist(
@@ -196,7 +196,28 @@ class Koi {
         return steering
     }
 
-    edges() {
+    // being attracted to a given attractor
+    attract(attractor) {
+        let steering = createVector();
+        let d = dist(
+            this.position.x,
+            this.position.y,
+            attractor.x,
+            attractor.y
+        );
+        // if (d < flockParams.perceptionRadius) {
+            let diff = p5.Vector.sub(attractor, this.position); // Subtract the positions in the opposite order
+            // diff.div(d);
+            steering.add(diff);
+            steering.setMag(flockParams.maxSpeed);
+            // steering.sub(this.velocity);
+            steering.limit(flockParams.maxForce);
+        // }
+        return steering;
+    }
+    
+
+    wrap() {
         if (this.position.x > width + 50) {
             this.position.x = -50
         } else if (this.position.x < -50) {
@@ -215,14 +236,19 @@ class Koi {
         let cohesion = this.cohesion(kois)
         let separation = this.separation(kois)
 
+        // TODO: create attractor based on pose
         let mouseObstacle = createVector(mouseX, mouseY)
-        let avoid = this.avoid(mouseObstacle)
+        // let avoid = this.avoid(mouseObstacle)
+        let attract = this.attract(mouseObstacle);
 
         alignment.mult(flockParams.alignAmp)
         cohesion.mult(flockParams.cohesionAmp)
         separation.mult(flockParams.separationAmp)
         
-        this.acceleration.add(avoid)
+        // this.acceleration.add(avoid)
+
+        // add attractor effect
+        this.acceleration.add(attract)
         this.acceleration.add(separation)
         this.acceleration.add(alignment)
         this.acceleration.add(cohesion)
@@ -303,7 +329,7 @@ Sketch: setup, draw, etc.
 //     })
 
 //     flock.forEach(koi => {
-//         koi.edges()
+//         koi.wrap()
 //         koi.flock(flock)
 //         koi.update()
 //         koi.show()

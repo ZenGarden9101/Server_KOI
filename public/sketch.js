@@ -28,9 +28,8 @@ var socket;
 
 // pose net
 let video;
-// let poseNet;
-// let poses = [];
-let hands = [];
+let poseNet;
+let poses = [];
 
 // initialise variables to handle messages
 let touchID;
@@ -57,7 +56,7 @@ let touchSfx = [];
 const flock = []
 const ripples = []
 const lotusLeaves = []
-const koiNumber = 20
+const koiNumber = 1 // create one koi to start with
 
 function preload() {
   bgm = loadSound('assets/background.mp3');
@@ -94,18 +93,14 @@ function setup() {
   // video.size(width, height);
 
   // Create a new poseNet method with a single detection
-  // poseNet = ml5.poseNet(video, modelReady);
-  // poseNet.on("pose", function(results) {
-  //   poses = results;
-  // });
+  poseNet = ml5.poseNet(video, modelReady);
+  poseNet.on("pose", function(results) {
+    poses = results;
+  });
   // Hide the video element, and just show the canvas
   video.hide();
 
 
-  handpose = ml5.handpose(video, modelReady);
-  handpose.on("hand", (results) => {
-    hands = results;
-  });
 
   const centerX = random(width - 200, 200)
   const centerY = random(height - 200, 200)
@@ -128,7 +123,7 @@ function draw() {
     })
 
     flock.forEach(koi => {
-        koi.edges()
+        koi.wrap()
         koi.flock(flock)
         koi.update()
         koi.show()
@@ -201,16 +196,16 @@ function draw() {
 
 
   // flip the video 
-  push();
-  translate(video.width, 0);
-  scale(-1, 1);
+  // push();
+  // translate(video.width, 0);
+  // scale(-1, 1);
   // image(video, 0, 0);
-  pop();
+  // pop();
 
-  // drawKeypoints(); // pose net
+  drawKeypoints(); // pose net
   // drawSkeleton(); // pose net
 
-  drawHandPoints();
+  // drawHandPoints();
 }
 
 function drawHandPoints() {
@@ -269,20 +264,27 @@ function drawKeypoints() {
   for (let i = 0; i < poses.length; i += 1) {
     // For each pose detected, loop through all the keypoints
     const pose = poses[i].pose;
-    if(abs(pose.leftEar.x - pose.rightEar.x) > 200){
-      keyPressed();
-    }
-    for (let j = 0; j < pose.keypoints.length; j += 1) {
-      // A keypoint is an object describing a body part (like rightArm or leftShoulder)
-      const keypoint = pose.keypoints[j];
-      // Only draw an ellipse is the pose probability is bigger than 0.2
-      if (keypoint.score > 0.5) {
-        fill(255, 0, 0);
-        noStroke();
-        ellipse(keypoint.position.x, keypoint.position.y, 10, 10);
-        console.log(keypoint);
-      }
-    }
+
+    // only draw nose
+    // TODO: map value to flip horizontally
+    const nose = pose.keypoints[0];
+    if (nose.score > 0.5) {
+          fill(255, 0, 0);
+          noStroke();
+          ellipse(nose.position.x, nose.position.y, 10, 10);
+          console.log(nose);
+        }
+    // for (let j = 0; j < pose.keypoints.length; j += 1) {
+    //   // A keypoint is an object describing a body part (like rightArm or leftShoulder)
+    //   const keypoint = pose.keypoints[j];
+    //   // Only draw an ellipse is the pose probability is bigger than 0.2
+    //   if (keypoint.score > 0.5) {
+    //     fill(255, 0, 0);
+    //     noStroke();
+    //     ellipse(keypoint.position.x, keypoint.position.y, 10, 10);
+    //     console.log(keypoint);
+    //   }
+    // }
   }
 }
 
