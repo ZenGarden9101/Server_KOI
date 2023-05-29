@@ -7,6 +7,8 @@
  * WEEK 04 - Example - MQTT Receiver by Luke Hespanhol
  */
 
+// import e = require("express");
+
 // document.addEventListener('touchstart', function(e) {
 //   document.documentElement.style.overflow = 'hidden';
 // });
@@ -55,8 +57,8 @@ let touchSfx = [];
 
 const flock = []
 const ripples = []
-const lotusLeaves = []
 const koiNumber = 1 // create one koi to start with
+let noseAttractor;
 
 function preload() {
   bgm = loadSound('assets/background.mp3');
@@ -92,22 +94,34 @@ function setup() {
   video = createCapture(VIDEO);
   // video.size(width, height);
 
-  // Create a new poseNet method with a single detection
+  // // Create a new poseNet object and listen for pose detection results
   poseNet = ml5.poseNet(video, modelReady);
-  poseNet.on("pose", function(results) {
+  poseNet.on("pose", results => {
     poses = results;
   });
+
   // Hide the video element, and just show the canvas
   video.hide();
 
+  // initialise attractor vector
+  noseAttractor = createVector(mouseX, mouseY);
 
+  
+  createKoi();
 
+}
+
+function createKoi() {
+  // check if the userId exist
+  // if not, create a new flock with single koii
+  // else add a new fish
   const centerX = random(width - 200, 200)
   const centerY = random(height - 200, 200)
 
   const color = random(koiColors)
-  new Array(koiNumber).fill(1).map(_ => flock.push(new Koi(centerX, centerY, color)))
-
+  // if array exist, add to the previous array
+  // TODO: import ArrayList
+  new Array(1).fill(1).map(_ => flock.push(new Koi(centerX, centerY, color)))
 }
 
 function modelReady() {
@@ -124,7 +138,8 @@ function draw() {
 
     flock.forEach(koi => {
         koi.wrap()
-        koi.flock(flock)
+        // TODO: noseAttractor[i]?
+        koi.flock(flock, noseAttractor) // feed in the attractor vector
         koi.update()
         koi.show()
     })
@@ -202,90 +217,54 @@ function draw() {
   // image(video, 0, 0);
   // pop();
 
-  drawKeypoints(); // pose net
+  drawNosepoints(); // pose net
   // drawSkeleton(); // pose net
 
-  // drawHandPoints();
 }
 
-function drawHandPoints() {
-  for (let i = 0; i < hands.length; i ++) {
-    
-    // For each pose detected, loop through all the landmarks
-    const hand = hands[i];
-    
-    for (let j = 0; j < hand.landmarks.length; j += 1) {
-      const landmark = hand.landmarks[j];
-        fill(255, 0, 0);
-        ellipse(map(landmark[0], 0, video.width, video.width, 0), map(landmark[1], 0, video.height, 0, video.height), 10, 10);
+
+
+// A function to draw ellipses over the detected keypoints
+function drawNosepoints() {
+  console.log(poses);
+
+  if(!poses.length) {
+    // noseAttractor.set(mouseX, mouseY);
+    noseAttractor = undefined;
+  }
+  else {
+    // Loop through all the poses detected
+    for (let i = 0; i < poses.length; i += 1) {
+      // For each pose detected, loop through all the keypoints
+      const pose = poses[i].pose;
+
+      // only draw nose
+      // TODO: map value to flip horizontally
+      const nose = pose.keypoints[0];
+      if (nose.score > 0.5) {
+            fill(255, 0, 0, (i+ 1) * 100);
+            noStroke();
+            let mapX = map(nose.position.x, 0, video.width, width, 0);
+            let mapY = map(nose.position.y, 0, video.height, 0, height);
+            // TODO: single nose attractor???
+            noseAttractor = createVector(mapX, mapY);
+            ellipse(mapX, mapY,10, 10);
+          }
+
+      // for(let j = 0; j < pose.keypoints.length; j++) {
+      //   const keypoint = pose.keypoints[j];
+      //   if (keypoint.score > 0.5) {
+      //     fill(255, 0, 0);
+      //     noStroke();
+      //     ellipse(keypoint.position.x, keypoint.position.y,10, 10);
+      //   }
+      // }
+
 
     }
   }
-}
-
-// A function to draw ellipses over the detected keypoints
-function drawHandKeyPoints() {
-  if(hands.length > 0){
-    const hand = hands[0];
-    // Get the positions of the thumb and forefinger
-    const thumb = hand.landmarks[4];
-    const foreFinger = hand.landmarks[8];
-
-    // Calculate the distance between the thumb and forefinger
-    const distance = dist(thumb[0], thumb[1], foreFinger[0], foreFinger[1]);
-    console.log("Raw Distance: " + distance);
-
-    //Scale the distance between 0 and 1
-    const scaledDistance = map(distance, 60, 250, 0, 1);
-    console.log("Scaled Distance: " + scaledDistance);
-
-    //Constrain the distance between 0 and 1
-    constrainedDistance = constrain(scaledDistance, 0, 1);
-    console.log("Constrained distance: ", constrainedDistance);
-
-    // Draw the thumb and forefinger as green circles
-    fill(0, 255, 0);
-    noStroke();
-    ellipse(thumb[0], thumb[1], 10, 10);
-    ellipse(foreFinger[0], foreFinger[1], 10, 10);
-  }
-  else{
-    constrainedDistance = 0;
-  }
-
-}
-
-
-
-
-// A function to draw ellipses over the detected keypoints
-function drawKeypoints() {
-  // Loop through all the poses detected
-  for (let i = 0; i < poses.length; i += 1) {
-    // For each pose detected, loop through all the keypoints
-    const pose = poses[i].pose;
-
-    // only draw nose
-    // TODO: map value to flip horizontally
-    const nose = pose.keypoints[0];
-    if (nose.score > 0.5) {
-          fill(255, 0, 0);
-          noStroke();
-          ellipse(nose.position.x, nose.position.y, 10, 10);
-          console.log(nose);
-        }
-    // for (let j = 0; j < pose.keypoints.length; j += 1) {
-    //   // A keypoint is an object describing a body part (like rightArm or leftShoulder)
-    //   const keypoint = pose.keypoints[j];
-    //   // Only draw an ellipse is the pose probability is bigger than 0.2
-    //   if (keypoint.score > 0.5) {
-    //     fill(255, 0, 0);
-    //     noStroke();
-    //     ellipse(keypoint.position.x, keypoint.position.y, 10, 10);
-    //     console.log(keypoint);
-    //   }
-    // }
-  }
+  
+  
 }
 
 // A function to draw the skeletons
@@ -297,12 +276,18 @@ function drawSkeleton() {
     for (let j = 0; j < skeleton.length; j += 1) {
       const partA = skeleton[j][0];
       const partB = skeleton[j][1];
+      push();
       stroke(255, 0, 0);
       line(partA.position.x, partA.position.y, partB.position.x, partB.position.y);
+      pop();
     }
   }
 }
 
+
+////////////////////////////////////////////////////
+// DESKTOP EVENT HANDLING
+////////////////////////////////////////////////////
 
 // events for mouse testing
 function mousePressed() {
@@ -311,6 +296,9 @@ function mousePressed() {
   ratioX = mouseX / width;
   ratioY = mouseY / height;
   ripples.push(new Ripple(mouseX, mouseY));
+
+  // trigger a new fish
+  createKoi();
 }
 
 function mouseDragged() {
@@ -328,15 +316,9 @@ function keyPressed() {
   // ratioY = poses[0].pose.nose.y / height;
 }
 
-function windowResized() {
-  // this function executes everytime the window size changes
-
-  // set the sketch width and height to the 5 pixels less than
-  // windowWidth and windowHeight. This gets rid of the scroll bars.
-  resizeCanvas(windowWidth, windowHeight);
-  // set background to light-gray
-  background(230);
-}
+// function windowResized() {
+//   resizeCanvas(windowWidth, windowHeight);
+// }
 
 
 ////////////////////////////////////////////////////
