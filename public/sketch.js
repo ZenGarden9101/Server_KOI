@@ -111,10 +111,13 @@ function setup() {
 
 }
 
+// TODO: currently each fish is in its own flock - multiple fish in the same flock
 function createKoi() {
   // check if the userId exist
-  // if not, create a new flock with single koii
+  // if not, create a new flock with single koi
   // else add a new fish
+
+  // TODO: create fish under the flower
   const centerX = random(width - 200, 200)
   const centerY = random(height - 200, 200)
 
@@ -297,8 +300,6 @@ function mousePressed() {
   ratioY = mouseY / height;
   ripples.push(new Ripple(mouseX, mouseY));
 
-  // trigger a new fish
-  createKoi();
 }
 
 function mouseDragged() {
@@ -309,11 +310,19 @@ function mouseDragged() {
 
 // trigger ripple
 function keyPressed() {
-  mode = "water";
-  ratioX = mouseX / width;
-  ratioY = mouseY / height;
-  // ratioX = poses[0].pose.nose.x / width;
-  // ratioY = poses[0].pose.nose.y / height;
+  if(keyCode === 32){
+    mode = "water";
+    ratioX = mouseX / width;
+    ratioY = mouseY / height;
+    // ratioX = poses[0].pose.nose.x / width;
+    // ratioY = poses[0].pose.nose.y / height;
+  }
+  else if(keyCode === 70) { // "f"
+    // trigger a new fish
+    createKoi();
+  }
+
+  
 }
 
 // function windowResized() {

@@ -154,14 +154,11 @@ class Koi {
             attractor.x,
             attractor.y
         );
-        // if (d < flockParams.perceptionRadius) {
-            let diff = p5.Vector.sub(attractor, this.position); // Subtract the positions in the opposite order
-            // diff.div(d);
-            steering.add(diff);
-            steering.setMag(flockParams.maxSpeed);
-            // steering.sub(this.velocity);
-            steering.limit(flockParams.maxForce);
-        // }
+        // steer towards the attractor position
+        let diff = p5.Vector.sub(attractor, this.position);
+        steering.add(diff);
+        steering.setMag(flockParams.maxSpeed);
+        steering.limit(flockParams.maxForce);
         return steering;
     }
     
@@ -189,11 +186,9 @@ class Koi {
         // let avoid = this.avoid(mouseObstacle)
         // this.acceleration.add(avoid)
 
-        // TODO: each flock should only have one attractor
-        console.log("received");
-        console.log(noseAttractor);
+        // TODO: each flock should only have one attractor only
         if(noseAttractor){
-            console.log("valid");
+            console.log("valid attractor");
             let attract = this.attract(noseAttractor);
             // add attractor effect
             this.acceleration.add(attract)
