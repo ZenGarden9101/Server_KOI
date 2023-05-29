@@ -1,14 +1,16 @@
+// TODO: redo the leaf class - make it easier to draw
+
 class Leaf {
   constructor(posX, posY, maxSize) {
     // leaves are created as if they are scattered around the mouse
     this.posX = posX + random(-maxSize, maxSize);
     this.posY = posY + random(-maxSize, maxSize);
     // random green colour
-    this.col = color(random(150, 160), random(190, 200), random(160, 180), random(20));
+    this.col = color(random(150, 160), random(190, 200), random(160, 180), random(100, 200)); // alpha random(20)
     this.maxR = random(maxSize, maxSize * 2);
     // each leaf is consist of 20 circles to mimic the look of ink spot
     this.noiseSteps = [];
-    for(let i = 0; i < 20; i++) {
+    for(let i = 0; i < 1; i++) {
       this.noiseSteps.push(random(100));
     }
 
