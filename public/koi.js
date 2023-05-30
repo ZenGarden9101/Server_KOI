@@ -1,3 +1,5 @@
+// TODO: REFERENCE
+
 class FlockParams {
     constructor() {
         this.maxForce = 0.08;
@@ -10,15 +12,6 @@ class FlockParams {
 }
 
 let flockParams = new FlockParams();
-// const gui = new dat.GUI()
-// gui.add(flockParams, 'alignAmp', 0.5, 2)
-// gui.add(flockParams, 'cohesionAmp', 0.5, 2)
-// gui.add(flockParams, 'separationAmp', 0.5, 2)
-// gui.add(flockParams, 'maxSpeed', 2, 6)
-// gui.add(flockParams, 'maxForce', .05, 3)
-// gui.add(flockParams, 'perceptionRadius', 20, 300)
-
-// const shadowColor = color(0);//"rgba(0,0,0,0.05)";
 
 /*==================
 Ripple

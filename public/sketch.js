@@ -37,7 +37,11 @@ let poses = [];
 let touchID;
 let ratioX = 0.5;
 let ratioY = 0.5;
-let mode;
+
+let mode; //water ripple or flower
+let passiveMode = true;
+let lastActiveTime = 0;
+let textAlpha = 0;
 
 // full colour palette and each touch's flower palette
 let colPalette = [];
@@ -51,16 +55,21 @@ let rippleY;
 let rippleR;
 
 // sounds
+let roundBrush;
 let bgm;
 let rippleSfx;
 let touchSfx = [];
 
 let flock = [];
 let ripples = [];
-let koiNumber = 5; // create one koi to start with
+let koiNumber = 3; // create 3 koi to start with
 let noseAttractor;
 
+
+let clientNum = 0;
+
 function preload() {
+    roundBrush = loadFont("assets/roundBrush.ttf");
     bgm = loadSound("assets/background.mp3");
     rippleSfx = loadSound("assets/ripple.mp3");
     // load the whole series of touch sfx
@@ -80,6 +89,8 @@ function setup() {
     noStroke();
     angleMode(DEGREES);
 
+    textFont(roundBrush);
+    textSize(32);
     bgm.loop();
 
     // initialise colour palette
@@ -125,24 +136,24 @@ function setup() {
 
     // UNCOMMTENT TO ENABLE POSE DETECTION
     // detect video source
-    // video = createCapture(VIDEO);
+    video = createCapture(VIDEO);
 
     // Create a new poseNet object and listen for pose detection results
-    // poseNet = ml5.poseNet(video, modelReady);
-    // poseNet.on("pose", results => {
-    //   poses = results;
-    // });
+    poseNet = ml5.poseNet(video, modelReady);
+    poseNet.on("pose", (results) => {
+        poses = results;
+    });
 
     // Hide the video element, and just show the canvas
-    // video.hide();
+    video.hide();
 
     // initialise first koi // TODO: only when user has joined
     // from the bottom of the screen
-    // for(let i = 0; i < koiNumber; i++) {
-    //     createKoi(random(width), random(height, height + 50));
-    // }
-    
-    generateLeaves(0.5);
+    for (let i = 0; i < koiNumber; i++) {
+        createKoi(random(width), random(height, height + 50));
+    }
+
+    if (passiveMode) generateLeaves(0.5);
 }
 
 // TODO?: currently each fish is in its own flock - multiple fish in the same flock
@@ -164,60 +175,104 @@ function generateLeaves(proportion) {
     for (let x = 60; x < width; x += 100) {
         for (let y = 60; y < height; y += 100) {
             let noiseVal = noise(x, y);
-            if(noiseVal > proportion) {
+            if (noiseVal > proportion) {
                 let leafNum = map(noiseVal, proportion, 1, 3, 8);
                 for (let i = 0; i < leafNum; i++) {
                     let posX = x + random(-50, 50);
                     let posY = y + random(-50, 50);
                     // avoid overlapping with existing leaves
-                    for(leaf of leaves) {
+                    for (leaf of leaves) {
                         let iteration = 0;
-                        while(dist(posX, posY, leaf.position.x, leaf.position.y) < leaf.r + min(width, height) / (12 + i * 3)){
-                            posX = x + random(-50 - iteration * 10, 50 + iteration * 10);
-                            posY = y + random(-50 - iteration * 10, 50 + iteration * 10);
-                            console.log("new pos " + posX, posY);
+                        while (
+                            dist(posX, posY, leaf.position.x, leaf.position.y) <
+                            leaf.r + min(width, height) / (12 + i * 3)
+                        ) {
+                            posX =
+                                x + random(-50 - iteration * 10, 50 + iteration * 10);
+                            posY =
+                                y + random(-50 - iteration * 10, 50 + iteration * 10);
                             iteration++; // continuously lower the density
                         }
                     }
-                    leaves.push(new Leaf(posX, posY,min(width, height) / (12 + i * 3)) );// leaf get smaller
-                    
-                    console.log("new leaf @ " + posX, posY);
+                    leaves.push(
+                        new Leaf(posX, posY, min(width, height) / (12 + i * 4))
+                    ); // leaf get smaller
                 }
             }
-
         }
     }
 }
 
 function draw() {
     background(244, 240, 230, 100);
-    // shadow
+
+    if (passiveMode) {
+        if (noseAttractor && textAlpha < 255) {
+            textAlpha++;
+        } else if (!noseAttractor && textAlpha > 0) {
+            textAlpha--;
+        }
+
+        push();
+        textAlign(CENTER);
+        fill(19, 69, 51, textAlpha);
+        text(
+            "Join from client to\nunlock more interaction modes",
+            width / 2,
+            height / 2
+        );
+        pop();
+    }
+    // once someone joined, the text will gradually disappear
+    else if(textAlpha > 0){
+        textAlpha--;
+        push();
+        textAlign(CENTER);
+        fill(19, 69, 51, textAlpha);
+        text(
+            "Join from client to\nunlock more interaction modes",
+            width / 2,
+            height / 2
+        );
+        pop();
+    }
+
+    // draw koi fish shadow
     flock.forEach((koi) => {
         koi.showShadow();
     });
 
+    // update and draw koi fish
     flock.forEach((koi) => {
         koi.wrap();
-        // TODO: noseAttractor[i]?
-        koi.flock(flock, noseAttractor); // feed in the attractor vector
+        // TODO: feed in an array of noseAttractor?
+        if (passiveMode) 
+            koi.flock(flock, undefined);
+        else 
+            koi.flock(flock, noseAttractor); // only feed in the attractor vector when the user has joined from client side
         koi.update();
         koi.show();
     });
 
+    // TODO: inside the range -> trigger collision once
     // collision trigger new flower
     for (let koi of flock) {
         for (let leaf of leaves) {
             // Create flower when koi approaches leaves
             // which evokes a new koi
             // if leaf can grow flower
-            if (noseAttractor && leaf.canBloom &&
-                dist(koi.position.x, koi.position.y, leaf.posX, leaf.posY) < leaf.maxR &&
-                random() < 0.01/flock.length //0.9 + 0.005 * flock.length 1% chance of creating flower
+            if (
+                noseAttractor &&
+                leaf.canBloom &&
+                dist(koi.position.x, koi.position.y, leaf.posX, leaf.posY) <
+                    leaf.maxR &&
+                random() < 0.01 / flock.length //0.9 + 0.005 * flock.length 1% chance of creating flower
             ) {
-                if(--leaf.flowerCap <= 0) {
+                if (--leaf.flowerCap <= 0) {
                     leaf.canBloom = false;
                 }
-                flowers.push(new Flower(
+                flowers.push(
+                    new Flower(
                         koi.position.x,
                         koi.position.y,
                         colPalette[1], //TODO: update to flowerPalette
@@ -229,22 +284,24 @@ function draw() {
         }
     }
 
-    if (frameCount % 60 === 0){
-        ripples.push(new Ripple(random(width), random(height)));
-    }  
+    // small ripple every second
+    if (frameCount % 60 === 0) {
+        ripples.push(
+            new Ripple(random(-50, width + 50), random(-50, height + 50))
+        );
+    }
 
+    // update and draw ripple
     ripples.forEach((ripple, i) => {
-        // console.log(ripple.position.x, ripple.position.y);
         ripple.update();
         ripple.show();
         if (ripple.lifespan < 0) ripples.splice(i, 1);
-        // console.log(ripples);
     });
 
     // use touchID to control colour palette
     // make sure each continuous touch will generate flowers with similar colour
-    let colPalIdx = touchID % colPalette.length;
-    flowerPalette = colPalette[colPalIdx];
+    // let colPalIdx = touchID % colPalette.length;
+    // flowerPalette = colPalette[colPalIdx];
 
     // generate flowers and leaves
     // if (mode == "flower") {
@@ -286,14 +343,12 @@ function draw() {
         rippleR = min(width, height) / 15;
 
         // blow all the leaves and flowers
-        for (let leaf of leaves){
-            if(random() > 0.5)
-                leaf.blow(rippleX, rippleY, rippleR);
+        for (let leaf of leaves) {
+            if (random() > 0.5) leaf.blow(rippleX, rippleY, rippleR);
         }
-        for (let flower of flowers){
-            if(random() > 0.5)
-                flower.blow(rippleX, rippleY, rippleR);
-        } 
+        for (let flower of flowers) {
+            if (random() > 0.5) flower.blow(rippleX, rippleY, rippleR);
+        }
 
         mode = "";
     }
@@ -311,6 +366,12 @@ function draw() {
 
     //draw all the leaves
     for (let leaf of leaves) {
+        // only feed in the attractor vector during passive mode
+        if (passiveMode) 
+            leaf.update(noseAttractor);
+        else 
+            leaf.update(undefined);
+        
         leaf.display();
     }
     //draw all the flowers
@@ -318,52 +379,66 @@ function draw() {
         flower.display();
     }
 
-    // flip the video
-    // push();
-    // translate(video.width, 0);
-    // scale(-1, 1);
-    // image(video, 0, 0);
-    // pop();
-
-    drawNosepoints(); // pose net
+    mapNose(); // pose net
+    updateMode();
 }
 
 // A function to draw ellipses over the detected keypoints
-function drawNosepoints() {
-    if (!poses.length) {
-        // noseAttractor.set(mouseX, mouseY);
-        noseAttractor = undefined;
-    } else {
-        // Loop through all the poses detected
-        for (let i = 0; i < poses.length; i += 1) {
-            // For each pose detected, loop through all the keypoints
-            const pose = poses[i].pose;
+function mapNose() {
+    // Loop through all the poses detected
+    for (let i = 0; i < poses.length; i += 1) {
+        // For each pose detected, loop through all the keypoints
+        const pose = poses[i].pose;
 
-            // only draw nose
-            // TODO: map value to flip horizontally
-            const nose = pose.keypoints[0];
-            if (nose.score > 0.5) {
-                fill(255, 0, 0, (i + 1) * 100);
-                noStroke();
-                let mapX = map(nose.position.x, 0, video.width, width, 0);
-                let mapY = map(nose.position.y, 0, video.height, 0, height);
-                // TODO: single nose attractor???
-                noseAttractor = createVector(mapX, mapY);
-                ellipse(mapX, mapY, 10, 10);
-            }
-
-            // for(let j = 0; j < pose.keypoints.length; j++) {
-            //   const keypoint = pose.keypoints[j];
-            //   if (keypoint.score > 0.5) {
-            //     fill(255, 0, 0);
-            //     noStroke();
-            //     ellipse(keypoint.position.x, keypoint.position.y,10, 10);
-            //   }
-            // }
+        // only draw nose
+        // TODO: map value to flip horizontally
+        const nose = pose.keypoints[0];
+        if (nose.score > 0.5) {
+            fill(255, 0, 0, (i + 1) * 100);
+            noStroke();
+            let mapX = map(nose.position.x, 0, video.width, width, 0);
+            let mapY = map(nose.position.y, 0, video.height, 0, height);
+            // TODO: single nose attractor???
+            noseAttractor = createVector(mapX, mapY);
+            ellipse(mapX, mapY, 10, 10);
         }
     }
 }
 
+function updateMode() {
+    // no detection
+    if (!poses.length) {
+        if(noseAttractor){
+            noseAttractor = undefined;
+        }
+
+        // set to passive mode if no active user for 2 minutes 
+        if (!passiveMode && Date.now() - lastActiveTime >= 1000) {// 120000
+            passiveMode = true;
+            // TODO: log off all the clients joined for more than 2 minutes
+            // send MQTT message?
+            // clientNum = 0;
+            console.log("back to passive mode");
+        }
+    } 
+    // detected movement
+    else {
+        lastActiveTime = Date.now();
+
+        // only change mode if the user has joined from client
+        if(passiveMode && clientNum > 0) {
+            passiveMode = false;
+            console.log("interactive mode");
+        }
+
+        if(clientNum == 0) {
+            passiveMode = true;
+            console.log("all user logged off");
+        }
+
+        
+    }
+}
 
 ////////////////////////////////////////////////////
 // DESKTOP EVENT HANDLING
@@ -371,31 +446,30 @@ function drawNosepoints() {
 
 // events for mouse testing
 function mousePressed() {
-    touchID = floor(random(500));
-    mode = "flower";
+    // touchID = floor(random(500));
+    // mode = "flower";
     ratioX = mouseX / width;
     ratioY = mouseY / height;
     ripples.push(new Ripple(mouseX, mouseY));
-    sendMessage("testttt from server")
+    // sendMessage("testttt from server")
 }
 
-function mouseDragged() {
-    mode = "flower";
-    ratioX = mouseX / width;
-    ratioY = mouseY / height;
-}
+// function mouseDragged() {
+//     mode = "flower";
+//     ratioX = mouseX / width;
+//     ratioY = mouseY / height;
+// }
 
 // trigger ripple
 function keyPressed() {
     if (keyCode === 32) {
-        console.log("space")
+        console.log("space");
         mode = "water";
         ratioX = mouseX / width;
         ratioY = mouseY / height;
         // ratioX = poses[0].pose.nose.x / width;
         // ratioY = poses[0].pose.nose.y / height;
-    } else if (keyCode === 70) {
-        // "f"
+    } else if (keyCode === 70) {// "f"
         // trigger a new fish
         createKoi();
     }
@@ -406,14 +480,6 @@ function keyPressed() {
 // }
 
 
-function sendMessage(message) {
-    let postData = JSON.stringify({ id: 1, 'message': message});
-
-    xmlHttpRequest.open("POST", HOST + '/sendMessage', false);
-    xmlHttpRequest.setRequestHeader("Content-Type", "application/json");
-	xmlHttpRequest.send(postData);
-}
-
 ////////////////////////////////////////////////////
 // MQTT MESSAGE HANDLING
 ////////////////////////////////////////////////////
@@ -422,17 +488,36 @@ function setupMqtt() {
     socket.on("mqttMessage", receiveMqtt);
 }
 
+// send message
+function sendMessage(message) {
+    let postData = JSON.stringify({ id: 1, message: message });
+
+    xmlHttpRequest.open("POST", HOST + "/sendMessage", false);
+    xmlHttpRequest.setRequestHeader("Content-Type", "application/json");
+    xmlHttpRequest.send(postData);
+}
+
+// receive and parse message
 function receiveMqtt(data) {
     var topic = data[0];
     var message = data[1];
     console.log("Topic: " + topic + ", message: " + message);
 
-    if (topic.includes("IDEA9101ZenGarden")) {
+    if (topic.includes("IDEA9101ZenGarden_01")) {
         // handle the received message
         messageAry = message.split(",");
-        touchID = messageAry[0].trim(); // Date.now() value
-        ratioX = messageAry[1].trim(); // 0-1, indicating mouseX relative position
-        ratioY = messageAry[2].trim(); // 0-1, indicating mouseY relative position
-        mode = messageAry[3].trim(); // string: grow flower or trigger ripple
+        userID = messageAry[0].trim(); // Date.now() value
+        join = boolean(messageAry[1].trim()); // boolean
+        // ratioX = messageAry[1].trim(); // 0-1, indicating mouseX relative position
+        // ratioY = messageAry[2].trim(); // 0-1, indicating mouseY relative position
+        // mode = messageAry[3].trim(); // string: grow flower or trigger ripple
+
+        if(join) {
+            clientNum++ //++;
+        }
+        else {
+            clientNum--;
+        }
+        console.log(clientNum);
     }
 }

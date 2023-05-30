@@ -49,8 +49,9 @@ mqttClient.on("connect", newMqttConnectionSuccess);
 mqttClient.on("error", mqttConnectionrError);
 mqttClient.on("message", receiveMqttMessage);
 
-var publishingMqttTopic = "IDEA9101ZenGarden_02";
-var receivingMqttTopic = "IDEA9101ZenGarden_01";
+// UNCOMMENT!
+var publishingMqttTopic = "IDEA9101ZenGarden_02"; //02
+var receivingMqttTopic = "IDEA9101ZenGarden_01"; //01
 
 // If the connection to the MQTT broker is successful, subscribe to the topic
 function newMqttConnectionSuccess() {
