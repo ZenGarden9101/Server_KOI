@@ -18,7 +18,7 @@ let flockParams = new FlockParams();
 // gui.add(flockParams, 'maxForce', .05, 3)
 // gui.add(flockParams, 'perceptionRadius', 20, 300)
 
-const shadowColor = "rgba(0,0,0,0.05)";
+// const shadowColor = color(0);//"rgba(0,0,0,0.05)";
 
 /*==================
 Ripple
@@ -28,9 +28,11 @@ class Ripple {
         this.position = createVector(x, y);
         this.size = random(50, 100);
         this.lifespan = 255;
-        this.color = color(255, 255, 255);
+        this.color = color(255);
+        this.shadowColor = color(0);
         this.sizeStep = random(2, 3);
         this.lifeStep = random(2, 10);
+        
     }
 
     drawShape(x, y, offset, size, color) {
@@ -44,6 +46,7 @@ class Ripple {
 
     show() {
         this.color.setAlpha(this.lifespan);
+        this.shadowColor.setAlpha(map(this.lifespan, 255, 0, 15, 0));
 
         this.drawShape(
             this.position.x,
@@ -57,7 +60,7 @@ class Ripple {
             this.position.y,
             50,
             this.size,
-            color(shadowColor)
+            this.shadowColor
         );
     }
 
@@ -89,7 +92,7 @@ class Koi {
         this.body = new Array(this.bodyLength).fill({ ...this.position });
     }
 
-    calculateDesiredSteeringForce(kois, factorType) {
+    calculateSteeringForce(kois, factorType) {
         let steering = createVector();
         let total = 0;
         for (let other of kois) {
@@ -129,23 +132,26 @@ class Koi {
         return steering;
     }
 
-    align = (kois) => this.calculateDesiredSteeringForce(kois, "align");
+    align = (kois) => this.calculateSteeringForce(kois, "align");
 
-    cohesion = (kois) => this.calculateDesiredSteeringForce(kois, "cohesion");
+    cohesion = (kois) => this.calculateSteeringForce(kois, "cohesion");
 
     separation = (kois) =>
-        this.calculateDesiredSteeringForce(kois, "separation");
+        this.calculateSteeringForce(kois, "separation");
 
     // avoid
     avoid(obstacle) {
         let steering = createVector();
-        let d = dist(this.position.x, this.position.y, obstacle.x, obstacle.y);
-        if (d < flockParams.perceptionRadius) {
-            let diff = p5.Vector.sub(this.position, obstacle);
+        let d = dist(
+            this.position.x,
+            this.position.y,
+            obstacle.position.x,
+            obstacle.position.y);
+        if (d < obstacle.size ) { //flockParams.perceptionRadius
+            let diff = p5.Vector.sub( this.position, obstacle.position);
             diff.div(d);
             steering.add(diff);
             steering.setMag(flockParams.maxSpeed);
-            steering.sub(this.velocity);
             steering.limit(flockParams.maxForce);
         }
         return steering;
@@ -154,12 +160,7 @@ class Koi {
     // being attracted to a given attractor
     attract(attractor) {
         let steering = createVector();
-        let d = dist(
-            this.position.x,
-            this.position.y,
-            attractor.x,
-            attractor.y
-        );
+
         // steer towards the attractor position
         let diff = p5.Vector.sub(attractor, this.position);
         steering.add(diff);
@@ -187,13 +188,17 @@ class Koi {
         let cohesion = this.cohesion(kois);
         let separation = this.separation(kois);
 
-        // let mouseObstacle = createVector(mouseX, mouseY)
-        // let avoid = this.avoid(mouseObstacle)
-        // this.acceleration.add(avoid)
+        // avoid small ripples
+        for(let i = 0; i < ripples.length; i++) {
+            let ripple = ripples[i];
+            // console.log(ripple);
+            let avoid = this.avoid(ripple);
+            this.acceleration.add(avoid);
+        }
 
         // TODO: each flock should only have one attractor only
         if (noseAttractor) {
-            console.log("valid attractor");
+            // console.log("valid attractor");
             let attract = this.attract(noseAttractor);
             // add attractor effect
             this.acceleration.add(attract);

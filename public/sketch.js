@@ -22,6 +22,7 @@
 //////////////////////////////////////////////////
 var HOST = window.location.origin;
 var socket;
+let xmlHttpRequest = new XMLHttpRequest();
 
 ////////////////////////////////////////////////////
 // CUSTOMIZABLE SECTION - BEGIN: ENTER OUR CODE HERE
@@ -54,9 +55,9 @@ let bgm;
 let rippleSfx;
 let touchSfx = [];
 
-const flock = [];
-const ripples = [];
-const koiNumber = 1; // create one koi to start with
+let flock = [];
+let ripples = [];
+let koiNumber = 5; // create one koi to start with
 let noseAttractor;
 
 function preload() {
@@ -95,92 +96,95 @@ function setup() {
             "rgba(137,171,218, 0.3)",
             "rgba(53, 78, 107, 0.3)",
         ], // blue palette
-        [
-            "rgba(237,109,70,0.3)",
-            "rgba(210,58,24, 0.3)",
-            "rgba(171,29,33, 0.3)",
-            "rgba(193,44,31, 0.3)",
-        ], // red palette
-        [
-            "rgba(176,69,82,0.3)",
-            "rgba(200,150,169, 0.3)",
-            "rgba(220,107,130, 0.3)",
-            "rgba(184,26,53, 0.3)",
-        ], // pink palette
-        [
-            "rgba(219, 196, 255,0.3)",
-            "rgba(180, 160, 230, 0.3)",
-            "rgba(242, 200, 242, 0.4)",
-            "rgba(59, 2, 115, 0.3)",
-        ], // purple palette
-        [
-            "rgba(250, 173, 20,0.3)",
-            "rgba(251, 185, 141, 0.3)",
-            "rgba(240,100,70, 0.3)",
-            "rgba(220, 145, 60, 0.3)",
-        ], // orange palette
+        // [
+        //     "rgba(237,109,70,0.3)",
+        //     "rgba(210,58,24, 0.3)",
+        //     "rgba(171,29,33, 0.3)",
+        //     "rgba(193,44,31, 0.3)",
+        // ], // red palette
+        // [
+        //     "rgba(176,69,82,0.3)",
+        //     "rgba(200,150,169, 0.3)",
+        //     "rgba(220,107,130, 0.3)",
+        //     "rgba(184,26,53, 0.3)",
+        // ], // pink palette
+        // [
+        //     "rgba(219, 196, 255,0.3)",
+        //     "rgba(180, 160, 230, 0.3)",
+        //     "rgba(242, 200, 242, 0.4)",
+        //     "rgba(59, 2, 115, 0.3)",
+        // ], // purple palette
+        // [
+        //     "rgba(250, 173, 20,0.3)",
+        //     "rgba(251, 185, 141, 0.3)",
+        //     "rgba(240,100,70, 0.3)",
+        //     "rgba(220, 145, 60, 0.3)",
+        // ], // orange palette
     ];
     flowerPalette = random(colPalette);
 
     // UNCOMMTENT TO ENABLE POSE DETECTION
     // detect video source
-    video = createCapture(VIDEO);
-    // video.size(width, height);
+    // video = createCapture(VIDEO);
 
     // Create a new poseNet object and listen for pose detection results
-    poseNet = ml5.poseNet(video, modelReady);
-    poseNet.on("pose", results => {
-      poses = results;
-    });
+    // poseNet = ml5.poseNet(video, modelReady);
+    // poseNet.on("pose", results => {
+    //   poses = results;
+    // });
 
     // Hide the video element, and just show the canvas
-    video.hide();
+    // video.hide();
 
-    // initialise attractor vector
-    // noseAttractor = createVector(mouseX, mouseY);
-
-    // createKoi();
-
-    generateLeaves(0.7);
+    // initialise first koi // TODO: only when user has joined
+    // from the bottom of the screen
+    // for(let i = 0; i < koiNumber; i++) {
+    //     createKoi(random(width), random(height, height + 50));
+    // }
+    
+    generateLeaves(0.5);
 }
 
-// TODO: currently each fish is in its own flock - multiple fish in the same flock
-function createKoi() {
-    // check if the userId exist
-    // if not, create a new flock with single koi
-    // else add a new fish
+// TODO?: currently each fish is in its own flock - multiple fish in the same flock
+// check if the userId exist
+// if not, create a new flock with single koi
+// else add a new fish
 
-    // TODO: create fish under the flower
-    const centerX = random(width - 200, 200);
-    const centerY = random(height - 200, 200);
-
+// Create a koi at the designated position
+function createKoi(posX, posY) {
     const color = random(koiColors);
-    // if array exist, add to the previous array
-    // TODO: import ArrayList
-    new Array(1)
-        .fill(1)
-        .map((_) => flock.push(new Koi(centerX, centerY, color)));
+
+    flock.push(new Koi(posX, posY, color));
 }
 
 // generate leaves based on 2D noise space
 // takes 1 parameter proportion (between 0 - 1) indicating the proportion of empty space when generating leaves
 // proportion = 0.7 means 70% of the canvas will be left empty
 function generateLeaves(proportion) {
-    for (let x = 0; x < width; x += 100) {
-        for (let y = 0; y < height; y += 100) {
+    for (let x = 60; x < width; x += 100) {
+        for (let y = 60; y < height; y += 100) {
             let noiseVal = noise(x, y);
-            let leafNum =
-                noiseVal > proportion ? map(noiseVal, proportion, 1, 3, 10) : 0;
-            // console.log(x, y, noise(x, y));
-            for (let i = 0; i < leafNum; i++) {
-                leaves.push(
-                    new Leaf(
-                        x + random(-10, 10),
-                        y + random(-10, 10),
-                        min(width, height) / 15
-                    )
-                );
+            if(noiseVal > proportion) {
+                let leafNum = map(noiseVal, proportion, 1, 3, 8);
+                for (let i = 0; i < leafNum; i++) {
+                    let posX = x + random(-50, 50);
+                    let posY = y + random(-50, 50);
+                    // avoid overlapping with existing leaves
+                    for(leaf of leaves) {
+                        let iteration = 0;
+                        while(dist(posX, posY, leaf.position.x, leaf.position.y) < leaf.r + min(width, height) / (12 + i * 3)){
+                            posX = x + random(-50 - iteration * 10, 50 + iteration * 10);
+                            posY = y + random(-50 - iteration * 10, 50 + iteration * 10);
+                            console.log("new pos " + posX, posY);
+                            iteration++; // continuously lower the density
+                        }
+                    }
+                    leaves.push(new Leaf(posX, posY,min(width, height) / (12 + i * 3)) );// leaf get smaller
+                    
+                    console.log("new leaf @ " + posX, posY);
+                }
             }
+
         }
     }
 }
@@ -200,33 +204,41 @@ function draw() {
         koi.show();
     });
 
-
     // collision trigger new flower
     for (let koi of flock) {
         for (let leaf of leaves) {
             // Create flower when koi approaches leaves
-            if (dist(koi.position.x, koi.position.y, leaf.posX, leaf.posY) < 20 &&
-            random() > 0.9 //0.2 chance of creating flower
+            // which evokes a new koi
+            // if leaf can grow flower
+            if (noseAttractor && leaf.canBloom &&
+                dist(koi.position.x, koi.position.y, leaf.posX, leaf.posY) < leaf.maxR &&
+                random() < 0.01/flock.length //0.9 + 0.005 * flock.length 1% chance of creating flower
             ) {
-                flowers.push(
-                    new Flower(
+                if(--leaf.flowerCap <= 0) {
+                    leaf.canBloom = false;
+                }
+                flowers.push(new Flower(
                         koi.position.x,
                         koi.position.y,
                         colPalette[1], //TODO: update to flowerPalette
                         min(width, height) / 15
                     )
                 );
+                // createKoi(koi.position.x, koi.position.y,);
             }
         }
     }
 
-    if (frameCount % 30 === 0)
+    if (frameCount % 60 === 0){
         ripples.push(new Ripple(random(width), random(height)));
+    }  
 
-    ripples.forEach((r, i) => {
-        r.update();
-        r.show();
-        if (r.lifespan < 0) ripples.splice(i, 1);
+    ripples.forEach((ripple, i) => {
+        // console.log(ripple.position.x, ripple.position.y);
+        ripple.update();
+        ripple.show();
+        if (ripple.lifespan < 0) ripples.splice(i, 1);
+        // console.log(ripples);
     });
 
     // use touchID to control colour palette
@@ -264,28 +276,37 @@ function draw() {
     // }
 
     // // create a ripple to blow away all the objects
-    // if (mode == "water") {
-    //     // blown away sound effect
-    //     rippleSfx.play();
+    if (mode == "water") {
+        // blown away sound effect
+        rippleSfx.play();
 
-    //     // store the data about the ripple
-    //     rippleX = ratioX * width;
-    //     rippleY = ratioY * height;
-    //     rippleR = min(width, height) / 15;
+        // store the data about the ripple
+        rippleX = ratioX * width;
+        rippleY = ratioY * height;
+        rippleR = min(width, height) / 15;
 
-    //     // blow all the leaves and flowers
-    //     for (let leaf of leaves) leaf.blow(rippleX, rippleY, rippleR);
-    //     for (let flower of flowers) flower.blow(rippleX, rippleY, rippleR);
+        // blow all the leaves and flowers
+        for (let leaf of leaves){
+            if(random() > 0.5)
+                leaf.blow(rippleX, rippleY, rippleR);
+        }
+        for (let flower of flowers){
+            if(random() > 0.5)
+                flower.blow(rippleX, rippleY, rippleR);
+        } 
 
-    //     mode = "";
-    // }
+        mode = "";
+    }
 
     // limit the maximum number of flowers can be drawn to avoid lagging
-    while (flowers.length > 30) {
-        flowers.shift();
-    }
-    while (leaves.length > 150) {
-        // leaves.shift();
+    // while (flowers.length > 30) {
+    //     flowers.shift();
+    // }
+    // while (leaves.length > 150) {
+    //     leaves.shift();
+    // }
+    while (flock.length > 20) {
+        flock.shift();
     }
 
     //draw all the leaves
@@ -305,7 +326,6 @@ function draw() {
     // pop();
 
     drawNosepoints(); // pose net
-    // drawSkeleton(); // pose net
 }
 
 // A function to draw ellipses over the detected keypoints
@@ -344,27 +364,6 @@ function drawNosepoints() {
     }
 }
 
-// A function to draw the skeletons
-function drawSkeleton() {
-    // Loop through all the skeletons detected
-    for (let i = 0; i < poses.length; i += 1) {
-        const skeleton = poses[i].skeleton;
-        // For every skeleton, loop through all body connections
-        for (let j = 0; j < skeleton.length; j += 1) {
-            const partA = skeleton[j][0];
-            const partB = skeleton[j][1];
-            push();
-            stroke(255, 0, 0);
-            line(
-                partA.position.x,
-                partA.position.y,
-                partB.position.x,
-                partB.position.y
-            );
-            pop();
-        }
-    }
-}
 
 ////////////////////////////////////////////////////
 // DESKTOP EVENT HANDLING
@@ -377,6 +376,7 @@ function mousePressed() {
     ratioX = mouseX / width;
     ratioY = mouseY / height;
     ripples.push(new Ripple(mouseX, mouseY));
+    sendMessage("testttt from server")
 }
 
 function mouseDragged() {
@@ -388,6 +388,7 @@ function mouseDragged() {
 // trigger ripple
 function keyPressed() {
     if (keyCode === 32) {
+        console.log("space")
         mode = "water";
         ratioX = mouseX / width;
         ratioY = mouseY / height;
@@ -403,6 +404,15 @@ function keyPressed() {
 // function windowResized() {
 //   resizeCanvas(windowWidth, windowHeight);
 // }
+
+
+function sendMessage(message) {
+    let postData = JSON.stringify({ id: 1, 'message': message});
+
+    xmlHttpRequest.open("POST", HOST + '/sendMessage', false);
+    xmlHttpRequest.setRequestHeader("Content-Type", "application/json");
+	xmlHttpRequest.send(postData);
+}
 
 ////////////////////////////////////////////////////
 // MQTT MESSAGE HANDLING
