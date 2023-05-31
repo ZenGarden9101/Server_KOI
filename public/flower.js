@@ -83,8 +83,19 @@ class Flower {
   constructor(posX, posY, flowerPalette, maxSize) {
     this.posX = posX + random(-maxSize, maxSize);
     this.posY = posY + random(-maxSize, maxSize);
-    // a random colour from the set colour palette
-    this.col = color(random(flowerPalette));
+
+    // the flower will get a lerp colour from the palette
+    // flowers have slightly different colours while maintain the consistency
+    let flowerCol;
+    let flowerGradient = noise(frameCount * 10);
+    if(flowerGradient < 0.5) {
+      flowerCol = lerpColor(color(flowerPalette[0]), color(flowerPalette[1]), map(flowerGradient, 0, 0.5, 0, 1));
+    }
+    else {
+      flowerCol = lerpColor(color(flowerPalette[1]), color(flowerPalette[2]), map(flowerGradient, 0.5, 1, 0, 1));
+    }
+    this.col = flowerCol;
+
     this.size = random(maxSize / 2, maxSize);
     this.petalLen = random(maxSize / 2, maxSize);
     this.growSpeed = random(0.001, 0.05);
