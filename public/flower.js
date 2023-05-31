@@ -34,7 +34,7 @@ class Petal {
     this.drawPetal();
     
     // draw stamen after all petals are drawn
-    if(this.petalCount == this.petalNum - 1)
+    if(this.petalCount == 0)
       this.drawStamen();
     pop();
 

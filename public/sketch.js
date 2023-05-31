@@ -96,7 +96,7 @@ function setup() {
 
     textFont(roundBrush);
     textSize(32);
-    // bgm.loop();
+    bgm.loop();
 
     // ai generated colour palette from colormind - for flowers
     // colPalette = [
@@ -365,9 +365,15 @@ function draw() {
 
         mode = "";
         triggerCountdown = 120;
+
+        // when a ripple is triggered, get new colour palette
+        generateColPalette(palette => {
+            flowerPalette = palette;
+            console.log(flowerPalette);
+        });
     }
 
-    // 
+
     if(triggerCountdown > 0) {
         triggerCountdown--;
     }
@@ -380,6 +386,11 @@ function draw() {
     //     leaves.shift();
     // }
     while (flock.length > 20) {
+        
+    }
+
+    // when there's no client, remove extra koi
+    if(flock.length > 3 * (clientNum + 1) && (flock[0].position.x < -20 ||flock[0].position.x > width + 20 || flock[0].position.y < -20 || flock[0].position.y > height + 20)) {
         flock.shift();
     }
 
@@ -483,10 +494,7 @@ function updateMode() {
 
 // events for mouse testing
 function mousePressed() {
-    generateColPalette(palette => {
-        flowerPalette = palette;
-        console.log(flowerPalette);
-    });
+    
     // touchID = floor(random(500));
     // mode = "flower";
     ratioX = mouseX / width;
@@ -547,9 +555,15 @@ function receiveMqtt(data) {
         // send msg with flower count, indicating if the user can trigger petal firework
         if(requestType == "join"){
             sendMobileMsg = true;
-            if(!clientId.includes(userID))
+            if(!clientId.includes(userID)){
                 clientId.push(userID);
                 clientNum++ // number of mobiles connected
+                // create 3 new koi fish when a new user joins
+                for (let i = 0; i < 3; i++) {
+                    createKoi(random(width), random(height, height + 50));
+                }
+            }
+                
         }
         else if(requestType == "water"){
             if(clientId.includes(userID)){
