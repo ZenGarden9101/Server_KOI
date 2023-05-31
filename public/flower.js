@@ -120,7 +120,8 @@ class Flower {
     fill(this.col);
 
     // if the petal has been blown, change its X and Y based on the ripple info
-    for(let petal of this.petals) {
+    for(let i = this.petals.length -1; i >= 0; i--) { //petal of this.petals
+      let petal = this.petals[i];
       if(this.isBlown) {
           this.disToRipple = dist(petal.posX, petal.posY, this.ripple.rippleX, this.ripple.rippleY);
         // only blow the petal if it is within the ripple's effective range
@@ -131,7 +132,13 @@ class Flower {
           petal.posX += vol.x + random(min(width, height) / 100);
           petal.posY += vol.y + random(min(width, height) / 100);
         }
+
+        // if petal outside the canvas, remove the petal from the array
+        if(petal.posX < -50 || petal.posX > width + 50 || petal.posY < -50 || petal.posY > height + 50) {
+          this.petals.splice(i, 1);
+        }
       }
+      
       petal.display();
     }
 

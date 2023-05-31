@@ -33,6 +33,11 @@ let video;
 let poseNet;
 let poses = [];
 
+let clientId = [];
+let clientNum = 0;
+let sendMobileMsg = false;
+let triggerCountdown = 120; // countdown for triggering a petal firework
+
 // initialise variables to handle messages
 let touchID;
 let ratioX = 0.5;
@@ -45,7 +50,7 @@ let textAlpha = 0;
 
 // full colour palette and each touch's flower palette
 // let colPalette = [];
-let flowerPalett = [];
+let flowerPalette = [];
 
 let flowers = [];
 let leaves = [];
@@ -66,7 +71,7 @@ let koiNumber = 3; // create 3 koi to start with
 let noseAttractor = [];
 
 
-let clientNum = 0;
+
 
 function preload() {
     roundBrush = loadFont("assets/roundBrush.ttf");
@@ -91,7 +96,7 @@ function setup() {
 
     textFont(roundBrush);
     textSize(32);
-    bgm.loop();
+    // bgm.loop();
 
     // ai generated colour palette from colormind - for flowers
     // colPalette = [
@@ -156,12 +161,7 @@ function setup() {
     video.hide();
 }
 
-// TODO?: currently each fish is in its own flock - multiple fish in the same flock
-// check if the userId exist
-// if not, create a new flock with single koi
-// else add a new fish
-
-// Create a koi at the designated position
+// Add a koi to the flock at the designated position
 function createKoi(posX, posY) {
     const color = random(koiColors);
 
@@ -288,7 +288,7 @@ function draw() {
                     new Flower(
                         koi.position.x,
                         koi.position.y,
-                        flowerPalette, //colPalette[1], //TODO: update to flowerPalette
+                        flowerPalette,
                         min(width, height) / 15
                     )
                 );
@@ -345,8 +345,8 @@ function draw() {
     //     mode = "";
     // }
 
-    // // create a ripple to blow away all the objects
-    if (mode == "water" ) { //&& canTrigger TODO 4. allow once per ..seconds push away!
+    // create a ripple to blow away all the flowers
+    if (mode == "water" && triggerCountdown == 0) {
         // blown away sound effect
         rippleSfx.play();
 
@@ -358,17 +358,18 @@ function draw() {
         // blow all the flowers, flowers can grow from the leaves again
         for (let leaf of leaves) {
             leaf.canBloom = true;
-            // if (clientNum && random() < 1/clientNum) {
-            //     leaf.blow(rippleX, rippleY, rippleR);
-                
-            // }
         }
         for (let flower of flowers) {
-            // if (clientNum && random() < 1/clientNum) 
             flower.blow(rippleX, rippleY, rippleR);
         }
 
         mode = "";
+        triggerCountdown = 120;
+    }
+
+    // 
+    if(triggerCountdown > 0) {
+        triggerCountdown--;
     }
 
     // limit the maximum number of flowers can be drawn to avoid lagging
@@ -409,32 +410,43 @@ function draw() {
         leaf.display();
     }
     //draw all the flowers
-    for (let flower of flowers) {
-        flower.display();
+    for (let i = flowers.length -1; i >= 0; i--) { 
+        let flower = flowers[i];
+
+        // if a flower has no petal left, remove the flower
+        if(!flower.petals.length) { 
+            flowers.splice(i, 1);
+        } 
+        else{
+            flower.display();
+        }
     }
 
     mapNose(); // pose net
     updateMode();
+
+    if(sendMobileMsg && flowers.length) {
+        sendMessage(flowers.length.toString());
+        sendMobileMsg = false;
+    }
 }
 
-// A function to draw ellipses over the detected keypoints
+// extract all the detected nose keypoints into an array
 function mapNose() {
     noseAttractor = [];
     // Loop through all the poses detected
     for (let i = 0; i < poses.length; i += 1) {
         
-        // For each pose detected, loop through all the keypoints
+        // For each pose detected, find the nose keypoint
         const pose = poses[i].pose;
 
-        // only draw nose
-        // TODO: map value to flip horizontally
         const nose = pose.keypoints[0];
         if (nose.score > 0.5) {
             fill(255, 0, 0, (i + 1) * 100);
             noStroke();
+            // flip horizontally so it's mirroring the movement
             let mapX = map(nose.position.x, 0, video.width, width, 0);
             let mapY = map(nose.position.y, 0, video.height, 0, height);
-            // TODO: single nose attractor???
             noseAttractor.push(createVector(mapX, mapY));
             ellipse(mapX, mapY, 10, 10);
         }
@@ -449,32 +461,21 @@ function updateMode() {
         }
 
         // set to passive mode if no active user for 2 minutes 
-        if (!passiveMode && Date.now() - lastActiveTime >= 1000) {// 120000
+        if (!passiveMode && Date.now() - lastActiveTime >= 12000) {// 120000
             passiveMode = true;
-            // TODO: log off all the clients joined for more than 2 minutes
-            // send MQTT message?
-            // clientNum = 0;
-            // console.log("back to passive mode");
+            clientNum = 0;
         }
     } 
     // detected movement
     else {
         lastActiveTime = Date.now();
-
-        // only change mode if the user has joined from client
+        // only change to interactive mode if the user has joined from client
         if(passiveMode && clientNum > 0) {
             passiveMode = false;
-            // console.log("interactive mode");
         }
-
-        else if(!passiveMode && clientNum == 0) {
-            passiveMode = true;
-            // console.log("all user logged off");
-        }
-
-        
     }
 }
+
 
 ////////////////////////////////////////////////////
 // DESKTOP EVENT HANDLING
@@ -490,15 +491,10 @@ function mousePressed() {
     // mode = "flower";
     ratioX = mouseX / width;
     ratioY = mouseY / height;
-    ripples.push(new Ripple(mouseX, mouseY));
+    // ripples.push(new Ripple(mouseX, mouseY));
     // sendMessage("testttt from server")
 }
 
-// function mouseDragged() {
-//     mode = "flower";
-//     ratioX = mouseX / width;
-//     ratioY = mouseY / height;
-// }
 
 // trigger ripple
 function keyPressed() {
@@ -546,19 +542,25 @@ function receiveMqtt(data) {
     if (topic.includes("IDEA9101ZenGarden_01")) {
         // handle the received message
         messageAry = message.split(",");
-        userID = messageAry[0].trim(); // Date.now() value
-        join = boolean(messageAry[1].trim()); // boolean
-        // ratioX = messageAry[1].trim(); // 0-1, indicating mouseX relative position
-        // ratioY = messageAry[2].trim(); // 0-1, indicating mouseY relative position
-        // mode = messageAry[3].trim(); // string: grow flower or trigger ripple
+        requestType= messageAry[0].trim(); // "join" or "water"
+        userID = messageAry[1].trim(); 
+        // send msg with flower count, indicating if the user can trigger petal firework
+        if(requestType == "join"){
+            sendMobileMsg = true;
+            if(!clientId.includes(userID))
+                clientId.push(userID);
+                clientNum++ // number of mobiles connected
+        }
+        else if(requestType == "water"){
+            if(clientId.includes(userID)){
+                ratioX = Number(messageAry[2].trim()); // 0-1, indicating mouseX relative position
+                ratioY = Number(messageAry[3].trim()); // 0-1, indicating mouseY relative position
+                if(triggerCountdown == 0)
+                    mode = "water";
+            }
+            
+        }
 
-        if(join) {
-            clientNum++ // number of mobile being connected/joined. userId count
-        }
-        else {
-            // clientNum--;
-        }
-        console.log(clientNum);
     }
 }
 
