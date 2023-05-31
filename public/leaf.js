@@ -52,13 +52,16 @@ class Leaf {
     // TODO: create a path based on cam tracking
     update(noseAttractor) {
         //noseAttractor
-        this.acceleration.mult(0);
+        this.acceleration.set(0, 0);
 
         // avoid small ripples
         for (let i = 0; i < ripples.length; i++) {
             let ripple = ripples[i];
             let avoid = this.avoid("ripple", ripple);
             this.acceleration.add(avoid);
+            this.velocity.add(this.acceleration);
+            
+            this.velocity.limit(0.2);
         }
 
         // avoid movement in passive move
@@ -66,14 +69,18 @@ class Leaf {
         if (noseAttractor) {
             let avoid = this.avoid("track", noseAttractor);
             this.acceleration.add(avoid);
+            this.velocity.add(this.acceleration);
+            // this.velocity.add(p5.Vector.random2D().mult(0.01));
+            this.velocity.limit(1);
         }
 
-        this.velocity.add(this.acceleration);
-        this.velocity.add(p5.Vector.random2D().mult(0.01));
-        if(!noseAttractor)
-            this.velocity.limit(0.2);
-        else
-            this.velocity.limit(1);
+        //TODO
+        // 1. fix noseAttractor update each frame - DONE
+        // 2. train teachable machine - DONE
+        // 3. ripple to clear the screen / blow up the flowers - DONE
+
+        // this.velocity.add(p5.Vector.random2D().mult(0.01));
+            
         this.position.add(this.velocity);
  
         this.position.limit(height/5);

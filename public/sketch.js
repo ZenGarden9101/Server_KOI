@@ -63,7 +63,7 @@ let touchSfx = [];
 let flock = [];
 let ripples = [];
 let koiNumber = 3; // create 3 koi to start with
-let noseAttractor;
+let noseAttractor = [];
 
 
 let clientNum = 0;
@@ -207,9 +207,9 @@ function draw() {
     background(244, 240, 230, 100);
 
     if (passiveMode) {
-        if (noseAttractor && textAlpha < 255) {
+        if (noseAttractor.length && textAlpha < 255) {
             textAlpha++;
-        } else if (!noseAttractor && textAlpha > 0) {
+        } else if (!noseAttractor.length && textAlpha > 0) {
             textAlpha--;
         }
 
@@ -217,7 +217,7 @@ function draw() {
         textAlign(CENTER);
         fill(19, 69, 51, textAlpha);
         text(
-            "Join from client to\nunlock more interaction modes",
+            "Join from mobile to\nunlock more interaction modes",
             width / 2,
             height / 2
         );
@@ -230,7 +230,7 @@ function draw() {
         textAlign(CENTER);
         fill(19, 69, 51, textAlpha);
         text(
-            "Join from client to\nunlock more interaction modes",
+            "Join from mobile to\nunlock more interaction modes",
             width / 2,
             height / 2
         );
@@ -245,11 +245,24 @@ function draw() {
     // update and draw koi fish
     flock.forEach((koi) => {
         koi.wrap();
-        // TODO: feed in an array of noseAttractor?
-        if (passiveMode) 
+        // only feed in the attractor vector when the user has joined from client side
+        if (!passiveMode && noseAttractor.length){
+            // koi will be attracted towards the nearest nose attractor
+            let minDis = max(width, height);
+            let closestPt;
+            for(let i = 0; i < noseAttractor.length; i++) {
+                let distance = dist(koi.position.x, koi.position.y, noseAttractor[i].x, noseAttractor[i].y);
+                if(distance < minDis) {
+                    minDis = distance;
+                    closestPt = noseAttractor[i];
+                }
+            }
+            koi.flock(flock, closestPt); 
+        }
+        else { //if(passiveMode)
             koi.flock(flock, undefined);
-        else 
-            koi.flock(flock, noseAttractor); // only feed in the attractor vector when the user has joined from client side
+        }
+            
         koi.update();
         koi.show();
     });
@@ -261,12 +274,12 @@ function draw() {
             // Create flower when koi approaches leaves
             // which evokes a new koi
             // if leaf can grow flower
-            if (
-                noseAttractor &&
+            if (!passiveMode &&
+                noseAttractor.length &&
                 leaf.canBloom &&
-                dist(koi.position.x, koi.position.y, leaf.posX, leaf.posY) <
-                    leaf.maxR &&
-                random() < 0.01 / flock.length //0.9 + 0.005 * flock.length 1% chance of creating flower
+                dist(koi.position.x, koi.position.y, leaf.position.x + leaf.iniX, leaf.position.y + leaf.iniY) <
+                    leaf.r &&
+                random() < 0.1 / flock.length //0.9 + 0.005 * flock.length 1% chance of creating flower
             ) {
                 if (--leaf.flowerCap <= 0) {
                     leaf.canBloom = false;
@@ -333,7 +346,7 @@ function draw() {
     // }
 
     // // create a ripple to blow away all the objects
-    if (mode == "water") {
+    if (mode == "water" ) { //&& canTrigger TODO 4. allow once per ..seconds push away!
         // blown away sound effect
         rippleSfx.play();
 
@@ -342,12 +355,17 @@ function draw() {
         rippleY = ratioY * height;
         rippleR = min(width, height) / 15;
 
-        // blow all the leaves and flowers
+        // blow all the flowers, flowers can grow from the leaves again
         for (let leaf of leaves) {
-            if (random() > 0.5) leaf.blow(rippleX, rippleY, rippleR);
+            leaf.canBloom = true;
+            // if (clientNum && random() < 1/clientNum) {
+            //     leaf.blow(rippleX, rippleY, rippleR);
+                
+            // }
         }
         for (let flower of flowers) {
-            if (random() > 0.5) flower.blow(rippleX, rippleY, rippleR);
+            // if (clientNum && random() < 1/clientNum) 
+            flower.blow(rippleX, rippleY, rippleR);
         }
 
         mode = "";
@@ -366,12 +384,28 @@ function draw() {
 
     //draw all the leaves
     for (let leaf of leaves) {
-        // only feed in the attractor vector during passive mode
-        if (passiveMode) 
-            leaf.update(noseAttractor);
-        else 
-            leaf.update(undefined);
-        
+        if(!leaf.isBlown) {
+            let globalPos = createVector(leaf.position.x + leaf.iniX, leaf.position.y + leaf.iniY);
+            // only feed in the attractor vector during passive mode
+            if (passiveMode && noseAttractor.length) {
+                // koi will be attracted towards the nearest nose attractor
+                let minDis = max(width, height);
+                let closestPt;
+                for(let i = 0; i < noseAttractor.length; i++) {
+                    let distance = dist(globalPos.x, globalPos.y, noseAttractor[i].x, noseAttractor[i].y);
+                    if(distance < minDis) {
+                        minDis = distance;
+                        closestPt = noseAttractor[i];
+                    }
+                }
+                leaf.update(closestPt);
+            }
+            
+            else {
+                leaf.update(undefined);
+            }
+        }
+
         leaf.display();
     }
     //draw all the flowers
@@ -385,8 +419,10 @@ function draw() {
 
 // A function to draw ellipses over the detected keypoints
 function mapNose() {
+    noseAttractor = [];
     // Loop through all the poses detected
     for (let i = 0; i < poses.length; i += 1) {
+        
         // For each pose detected, loop through all the keypoints
         const pose = poses[i].pose;
 
@@ -399,7 +435,7 @@ function mapNose() {
             let mapX = map(nose.position.x, 0, video.width, width, 0);
             let mapY = map(nose.position.y, 0, video.height, 0, height);
             // TODO: single nose attractor???
-            noseAttractor = createVector(mapX, mapY);
+            noseAttractor.push(createVector(mapX, mapY));
             ellipse(mapX, mapY, 10, 10);
         }
     }
@@ -408,8 +444,8 @@ function mapNose() {
 function updateMode() {
     // no detection
     if (!poses.length) {
-        if(noseAttractor){
-            noseAttractor = undefined;
+        if(noseAttractor.length){
+            noseAttractor = [];
         }
 
         // set to passive mode if no active user for 2 minutes 
@@ -418,7 +454,7 @@ function updateMode() {
             // TODO: log off all the clients joined for more than 2 minutes
             // send MQTT message?
             // clientNum = 0;
-            console.log("back to passive mode");
+            // console.log("back to passive mode");
         }
     } 
     // detected movement
@@ -428,12 +464,12 @@ function updateMode() {
         // only change mode if the user has joined from client
         if(passiveMode && clientNum > 0) {
             passiveMode = false;
-            console.log("interactive mode");
+            // console.log("interactive mode");
         }
 
-        if(clientNum == 0) {
+        else if(!passiveMode && clientNum == 0) {
             passiveMode = true;
-            console.log("all user logged off");
+            // console.log("all user logged off");
         }
 
         
@@ -513,10 +549,10 @@ function receiveMqtt(data) {
         // mode = messageAry[3].trim(); // string: grow flower or trigger ripple
 
         if(join) {
-            clientNum++ //++;
+            clientNum++ // number of mobile being connected/joined. userId count
         }
         else {
-            clientNum--;
+            // clientNum--;
         }
         console.log(clientNum);
     }
