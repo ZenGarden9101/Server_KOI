@@ -1,5 +1,5 @@
 /*
- * MQTT Server - Server side sketch
+ * MQTT Server - Display (peer) side sketch
  * Author: mlai4943, qxie3495, yuwu0411, zcui2280
  * Date: May 2023
  *
@@ -50,8 +50,8 @@ mqttClient.on("error", mqttConnectionrError);
 mqttClient.on("message", receiveMqttMessage);
 
 // UNCOMMENT!
-var publishingMqttTopic = "IDEA9101ZenGarden_02"; //02
-var receivingMqttTopic = "IDEA9101ZenGarden_01"; //01
+var publishingMqttTopic = "IDEA9101ZenGarden_02"; 
+var receivingMqttTopic = "IDEA9101ZenGarden_01"; 
 
 // If the connection to the MQTT broker is successful, subscribe to the topic
 function newMqttConnectionSuccess() {

@@ -1,5 +1,17 @@
-// TODO: REFERENCE
+/*
+ * Koi and flock parameters
+ * 
+ * Adapted and modified based on IDEA9103 Design Programming
+ * WEEK 10 Boid System: https://editor.p5js.org/DWAIL/sketches/wQPsFpa82
+ * and
+ * flocking simulation by @unicar
+ * https://codepen.io/unicar/pen/LwbRbo
+ * 
+ * Additional methods including avoid and attract have been implemented.
+ */
 
+
+// key parameters for the flock
 class FlockParams {
     constructor() {
         this.maxForce = 0.08;
@@ -13,20 +25,13 @@ class FlockParams {
 
 let flockParams = new FlockParams();
 
-
-
-/*==================
-Koi
-===================*/
-
+// koi will be one of the three colours - red, orange, yellow
 const koiColors = ["#E95D0C", "#EEA237", "#E02D28"];
 
 class Koi {
     constructor(x, y, koiColor) {
         this.color = color(koiColor);
-        // this.offsetX = random(-100, 100);
-        // this.offsetY = random(-100, 100);
-        this.position = createVector(x , y );//+ this.offsetX, + this.offsetY
+        this.position = createVector(x, y);
         this.velocity = p5.Vector.random2D();
         this.velocity.setMag(random(2, 10));
         this.acceleration = createVector();
@@ -203,10 +208,3 @@ class Koi {
         this.updateBody();
     }
 }
-
-/*==================
-Sketch: click to ripple
-===================*/
-// function mouseClicked() {
-//     ripples.push(new Ripple(mouseX, mouseY))
-// }

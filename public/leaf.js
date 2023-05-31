@@ -1,5 +1,3 @@
-// TODO: redo the leaf class - make it easier to draw
-
 class Leaf {
     constructor(posX, posY, maxSize) {
         this.iniX = posX;
@@ -12,17 +10,15 @@ class Leaf {
             random(160, 180),
             random(50, 100)
         ); 
-        this.r = random(maxSize / 1.5, maxSize);
-        this.noiseSteps = noise(posX / 100, posY / 100) * 5; //random(100);
+        this.r = random(maxSize / 1.5, maxSize); // radius of the leaf
+        this.noiseSteps = noise(posX / 100, posY / 100) * 5; 
 
         this.canBloom = true;
-        this.flowerCap = 1;
+        this.flowerCap = 1; // each flower can bear max 1 flower
 
         this.ripple;
         this.isBlown = false;
 
-        // this.velocity = p5.Vector.random2D();
-        // this.velocity.setMag(0.1);
         this.velocity = createVector();
         this.acceleration = createVector();
     }
@@ -34,22 +30,14 @@ class Leaf {
         translate(this.iniX, this.iniY);
         circle(this.position.x, this.position.y, this.r * 2);
         pop();
-
         // if the leaf has been blown, change its X and Y based on the ripple info
         if (this.isBlown) {
             this.blowUpdate();
         }
-        // moving x, y to make the drawing more dynamic
-        // else{
-        // this.position.x = this.iniX + lerp(-this.r/2, this.r/2, noise(this.noiseSteps+ 10));
-        // this.position.y = this.iniY + lerp(-this.r/2, this.r/2, noise(this.noiseSteps));
-        // }
-
         // update noise step to adjust position for the next frame
         this.noiseSteps += 0.003;
     }
 
-    // TODO: create a path based on cam tracking
     update(noseAttractor) {
         //noseAttractor
         this.acceleration.set(0, 0);
@@ -60,32 +48,21 @@ class Leaf {
             let avoid = this.avoid("ripple", ripple);
             this.acceleration.add(avoid);
             this.velocity.add(this.acceleration);
-            
             this.velocity.limit(0.2);
         }
 
         // avoid movement in passive move
-        // TODO: if mode 0
         if (noseAttractor) {
             let avoid = this.avoid("track", noseAttractor);
             this.acceleration.add(avoid);
             this.velocity.add(this.acceleration);
-            // this.velocity.add(p5.Vector.random2D().mult(0.01));
             this.velocity.limit(1);
         }
-
-        //TODO
-        // 1. fix noseAttractor update each frame - DONE
-        // 2. train teachable machine - DONE
-        // 3. ripple to clear the screen / blow up the flowers - DONE
-
-        // this.velocity.add(p5.Vector.random2D().mult(0.01));
-            
         this.position.add(this.velocity);
- 
         this.position.limit(height/5);
     }
 
+    // repel from the obstacle
     avoid(mode, obstacle) {
         let steering = createVector();
         let globalPos = p5.Vector.add(
@@ -104,7 +81,6 @@ class Leaf {
                 let diff = p5.Vector.sub(globalPos, obstacle.position);
                 diff.div(d);
                 steering.add(diff);
-                // steering.setMag(3);
                 steering.limit(0.02);
             }
         }
@@ -118,8 +94,6 @@ class Leaf {
           if (d < 200) {
               let diff = p5.Vector.sub(globalPos, createVector(obstacle.x, obstacle.y));
               steering.add(diff);
-              // steering.setMag(5);
-              // steering.limit(0.05);
           }
       }
 
