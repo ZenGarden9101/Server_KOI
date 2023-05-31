@@ -44,7 +44,7 @@ let lastActiveTime = 0;
 let textAlpha = 0;
 
 // full colour palette and each touch's flower palette
-let colPalette = [];
+// let colPalette = [];
 let flowerPalett = [];
 
 let flowers = [];
@@ -93,67 +93,67 @@ function setup() {
     textSize(32);
     bgm.loop();
 
-    // initialise colour palette
-    colPalette = [
-        [
-            "rgba( 65, 143, 191,0.3)",
-            "rgba( 108, 175, 217, 0.3)",
-            "rgba(119, 189, 217, 0.3)",
-            "rgba(155, 218, 242, 0.3)",
-        ], // light blue palette
-        [
-            "rgba(18,100,130,0.3)",
-            "rgba(5,67,111, 0.3)",
-            "rgba(137,171,218, 0.3)",
-            "rgba(53, 78, 107, 0.3)",
-        ], // blue palette
-        // [
-        //     "rgba(237,109,70,0.3)",
-        //     "rgba(210,58,24, 0.3)",
-        //     "rgba(171,29,33, 0.3)",
-        //     "rgba(193,44,31, 0.3)",
-        // ], // red palette
-        // [
-        //     "rgba(176,69,82,0.3)",
-        //     "rgba(200,150,169, 0.3)",
-        //     "rgba(220,107,130, 0.3)",
-        //     "rgba(184,26,53, 0.3)",
-        // ], // pink palette
-        // [
-        //     "rgba(219, 196, 255,0.3)",
-        //     "rgba(180, 160, 230, 0.3)",
-        //     "rgba(242, 200, 242, 0.4)",
-        //     "rgba(59, 2, 115, 0.3)",
-        // ], // purple palette
-        // [
-        //     "rgba(250, 173, 20,0.3)",
-        //     "rgba(251, 185, 141, 0.3)",
-        //     "rgba(240,100,70, 0.3)",
-        //     "rgba(220, 145, 60, 0.3)",
-        // ], // orange palette
-    ];
-    flowerPalette = random(colPalette);
+    // ai generated colour palette from colormind - for flowers
+    // colPalette = [
+    //     [
+    //         "rgba( 65, 143, 191,0.3)",
+    //         "rgba( 108, 175, 217, 0.3)",
+    //         "rgba(119, 189, 217, 0.3)",
+    //         "rgba(155, 218, 242, 0.3)",
+    //     ], // light blue palette
+    //     [
+    //         "rgba(18,100,130,0.3)",
+    //         "rgba(5,67,111, 0.3)",
+    //         "rgba(137,171,218, 0.3)",
+    //         "rgba(53, 78, 107, 0.3)",
+    //     ], // blue palette
+    //     // [
+    //     //     "rgba(237,109,70,0.3)",
+    //     //     "rgba(210,58,24, 0.3)",
+    //     //     "rgba(171,29,33, 0.3)",
+    //     //     "rgba(193,44,31, 0.3)",
+    //     // ], // red palette
+    //     // [
+    //     //     "rgba(176,69,82,0.3)",
+    //     //     "rgba(200,150,169, 0.3)",
+    //     //     "rgba(220,107,130, 0.3)",
+    //     //     "rgba(184,26,53, 0.3)",
+    //     // ], // pink palette
+    //     // [
+    //     //     "rgba(219, 196, 255,0.3)",
+    //     //     "rgba(180, 160, 230, 0.3)",
+    //     //     "rgba(242, 200, 242, 0.4)",
+    //     //     "rgba(59, 2, 115, 0.3)",
+    //     // ], // purple palette
+    //     // [
+    //     //     "rgba(250, 173, 20,0.3)",
+    //     //     "rgba(251, 185, 141, 0.3)",
+    //     //     "rgba(240,100,70, 0.3)",
+    //     //     "rgba(220, 145, 60, 0.3)",
+    //     // ], // orange palette
+    // ];
+    generateColPalette(palette => {
+        flowerPalette = palette;
+        console.log(flowerPalette);
+    });
 
-    // UNCOMMTENT TO ENABLE POSE DETECTION
-    // detect video source
+    // initialise the koi fish
+    for (let i = 0; i < koiNumber; i++) {
+        createKoi(random(width), random(height, height + 50));
+    }
+    // initialise leaves
+    if (passiveMode) generateLeaves(0.5);
+
+    // pose detection
+    // capture video source
     video = createCapture(VIDEO);
-
     // Create a new poseNet object and listen for pose detection results
     poseNet = ml5.poseNet(video, modelReady);
     poseNet.on("pose", (results) => {
         poses = results;
     });
-
-    // Hide the video element, and just show the canvas
+    // Hide the video element
     video.hide();
-
-    // initialise first koi // TODO: only when user has joined
-    // from the bottom of the screen
-    for (let i = 0; i < koiNumber; i++) {
-        createKoi(random(width), random(height, height + 50));
-    }
-
-    if (passiveMode) generateLeaves(0.5);
 }
 
 // TODO?: currently each fish is in its own flock - multiple fish in the same flock
@@ -288,7 +288,7 @@ function draw() {
                     new Flower(
                         koi.position.x,
                         koi.position.y,
-                        colPalette[1], //TODO: update to flowerPalette
+                        flowerPalette, //colPalette[1], //TODO: update to flowerPalette
                         min(width, height) / 15
                     )
                 );
@@ -482,6 +482,10 @@ function updateMode() {
 
 // events for mouse testing
 function mousePressed() {
+    generateColPalette(palette => {
+        flowerPalette = palette;
+        console.log(flowerPalette);
+    });
     // touchID = floor(random(500));
     // mode = "flower";
     ratioX = mouseX / width;
@@ -556,4 +560,37 @@ function receiveMqtt(data) {
         }
         console.log(clientNum);
     }
+}
+
+
+////////////////////////////////////////////////////
+// GENERATE COLOUR PALETTE FROM COLORMIND
+////////////////////////////////////////////////////
+
+// http://colormind.io/api-access/
+
+function generateColPalette(callback){
+    var url = "http://colormind.io/api/";
+    var data = {
+        model : "default"
+    }
+
+    var http = new XMLHttpRequest();
+
+    http.onreadystatechange = function() {
+        if(http.readyState == 4 && http.status == 200) {
+            var palette = JSON.parse(http.responseText).result;
+
+            // assign alpha for each colour, make it transparent
+            for(let i = 0; i < palette.length; i++) {
+                palette[i].push(random(80, 150));
+            }
+            // return the palette using a callback function to handel async issue
+            // remove the first and last colours as they tend to be too dark or too bright
+            callback(palette.slice(1, 4)); // an array of 3 arrays each with rgba values
+        }
+    }
+
+    http.open("POST", url, true);
+    http.send(JSON.stringify(data));
 }
