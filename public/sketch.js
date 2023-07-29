@@ -388,7 +388,7 @@ function mapNose() {
             let mapX = map(nose.position.x, 0, video.width, width, 0);
             let mapY = map(nose.position.y, 0, video.height, 0, height);
             noseAttractor.push(createVector(mapX, mapY));
-            // ellipse(mapX, mapY, 10, 10);
+            ellipse(mapX, mapY, 10, 10);
         }
     }
 }

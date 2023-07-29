@@ -1,13 +1,13 @@
-# IDEA9101 IDEA Lab - Server
+# IDEA9101 IDEA Lab - Display (peer 01) side
 
-Server side code to be ran on the computer ends. 
+Display-side code to be ran on the computer ends, using camera tracking to detect user movement.
 
 ## Getting Started
 Follow the instructions below to run the server webpage on your local machine.
 
 First, clone the repository:
 ```
-git clone git@github.com:ZenGarden9101/A2Server.git
+git clone git@github.com:ZenGarden9101/Server_KOI.git
 ```
 
 Use the following command to installs dependency packages:

@@ -1,5 +1,5 @@
 /*
- * MQTT Server - Display (peer) side sketch
+ * MQTT Server - Display (peer 01) side sketch
  * Author: mlai4943, qxie3495, yuwu0411, zcui2280
  * Date: May 2023
  *
